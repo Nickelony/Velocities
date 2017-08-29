@@ -20,7 +20,7 @@ public Plugin myinfo =
 {
 	name = "Velocities",
 	author = "Nickelony", // Special thanks to Zipcore for fixing some stuff. :)
-	description = "Adds custom velocity options, such as sv_minvelocity, sv_bonusvelocity etc.",
+	description = "Adds custom velocity settings, such as sv_minvelocity, sv_bonusvelocity etc.",
 	version = "1.0.0",
 	url = "http://steamcommunity.com/id/nickelony/"
 };
@@ -100,7 +100,7 @@ void MinVelocity(any data)
 		float fAbsVelocity[3];
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
 		
-		float fCurrentSpeed = (SquareRoot(Pow(fAbsVelocity[0], 2.0) + Pow(fAbsVelocity[1], 2.0)));
+		float fCurrentSpeed = SquareRoot(Pow(fAbsVelocity[0], 2.0) + Pow(fAbsVelocity[1], 2.0));
 		
 		if(fCurrentSpeed > 0.0)
 		{
