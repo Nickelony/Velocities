@@ -7,21 +7,25 @@
 /* CVars */
 
 ConVar gCV_BonusVelocity = null;
-ConVar gCV_MinVelocity = null;
+ConVar gCV_MaxVelocity = null;
+ConVar gCV_MaxJumpVelocity = null;
+ConVar gCV_MinJumpVelocity = null;
 ConVar gCV_Velocity_Multiplier = null;
 
 /* Cached CVars */
 
 float gF_BonusVelocity = 0.0;
-float gF_MinVelocity = 0.0;
+float gF_MaxVelocity = 0.0;
+float gF_MaxJumpVelocity = 0.0;
+float gF_MinJumpVelocity = 0.0;
 float gF_Velocity_Multiplier = 1.0;
 
 public Plugin myinfo = 
 {
 	name = "Velocities",
 	author = "Nickelony", // Special thanks to Zipcore for fixing some stuff. :)
-	description = "Adds custom velocity settings, such as sv_minvelocity, sv_bonusvelocity etc.",
-	version = "1.0.0",
+	description = "Adds custom velocity settings.",
+	version = "2.0",
 	url = "http://steamcommunity.com/id/nickelony/"
 };
 
@@ -29,12 +33,16 @@ public void OnPluginStart()
 {
 	HookEvent("player_jump", PlayerJumpEvent);
 	
-	gCV_BonusVelocity = CreateConVar("sv_bonusvelocity", "0.0", "Adds a fixed amount of bonus velocity every time you jump.", 0, true, 0.0);
-	gCV_MinVelocity = CreateConVar("sv_minvelocity", "0.0", "Minimum amount of velocity to keep per jump.", 0, true, 0.0);
-	gCV_Velocity_Multiplier = CreateConVar("sv_velocity_multiplier", "1.0", "Multiplies your current velocity every time you jump.", 0, true, 0.0);
+	gCV_BonusVelocity = CreateConVar("bonus_velocity", "0.0", "Adds a fixed amount of bonus velocity every time you jump.", 0);
+	gCV_MaxVelocity = CreateConVar("max_velocity", "0.0", "Replacement for sv_maxvelocity, but this one can be client-sided.", 0, true, 0.0);
+	gCV_MaxJumpVelocity = CreateConVar("max_jump_velocity", "0.0", "Maximum amount of velocity to keep per jump.", 0, true, 0.0);
+	gCV_MinJumpVelocity = CreateConVar("min_jump_velocity", "0.0", "Minimum amount of velocity to keep per jump.", 0, true, 0.0);
+	gCV_Velocity_Multiplier = CreateConVar("velocity_multiplier", "1.0", "Multiplies your current velocity every time you jump.", 0);
 	
 	gCV_BonusVelocity.AddChangeHook(OnConVarChanged);
-	gCV_MinVelocity.AddChangeHook(OnConVarChanged);
+	gCV_MaxVelocity.AddChangeHook(OnConVarChanged);
+	gCV_MaxJumpVelocity.AddChangeHook(OnConVarChanged);
+	gCV_MinJumpVelocity.AddChangeHook(OnConVarChanged);
 	gCV_Velocity_Multiplier.AddChangeHook(OnConVarChanged);
 	
 	AutoExecConfig();
@@ -43,8 +51,35 @@ public void OnPluginStart()
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
 	gF_BonusVelocity = gCV_BonusVelocity.FloatValue;
-	gF_MinVelocity = gCV_MinVelocity.FloatValue;
+	gF_MaxVelocity = gCV_MaxVelocity.FloatValue;
+	gF_MaxJumpVelocity = gCV_MaxJumpVelocity.FloatValue;
+	gF_MinJumpVelocity = gCV_MinJumpVelocity.FloatValue;
 	gF_Velocity_Multiplier = gCV_Velocity_Multiplier.FloatValue;
+}
+
+public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
+{
+	if(gF_MaxVelocity > 0.0)
+	{
+		float fAbsVelocity[3];
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
+		
+		float fCurrentSpeed = SquareRoot(Pow(fAbsVelocity[0], 2.0) + Pow(fAbsVelocity[1], 2.0));
+		
+		if(fCurrentSpeed > 0.0)
+		{
+			float fMax = gF_MaxVelocity;
+			
+			if(fCurrentSpeed > fMax)
+			{
+				float x = fCurrentSpeed / (fMax);
+				fAbsVelocity[0] /= x;
+				fAbsVelocity[1] /= x;
+				
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fAbsVelocity);
+			}
+		}
+	}
 }
 
 public void PlayerJumpEvent(Event event, const char[] name, bool dontBroadcast)
@@ -56,9 +91,14 @@ public void PlayerJumpEvent(Event event, const char[] name, bool dontBroadcast)
 		RequestFrame(BonusVelocity, GetClientUserId(client));
 	}
 	
-	if(gF_MinVelocity != 0.0)
+	if(gF_MaxJumpVelocity > 0.0)
 	{
-		RequestFrame(MinVelocity, GetClientUserId(client));
+		RequestFrame(MaxJumpVelocity, GetClientUserId(client));
+	}
+	
+	if(gF_MinJumpVelocity > 0.0)
+	{
+		RequestFrame(MinJumpVelocity, GetClientUserId(client));
 	}
 	
 	if(gF_Velocity_Multiplier != 1.0)
@@ -86,12 +126,12 @@ void BonusVelocity(any data)
 			fAbsVelocity[0] /= x;
 			fAbsVelocity[1] /= x;
 			
-			SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fAbsVelocity);
 		}
 	}
 }
 
-void MinVelocity(any data)
+void MaxJumpVelocity(any data)
 {
 	int client = GetClientOfUserId(data);
 	
@@ -104,7 +144,34 @@ void MinVelocity(any data)
 		
 		if(fCurrentSpeed > 0.0)
 		{
-			float fMin = gF_MinVelocity;
+			float fMax = gF_MaxJumpVelocity;
+			
+			if(fCurrentSpeed > fMax)
+			{
+				float x = fCurrentSpeed / (fMax);
+				fAbsVelocity[0] /= x;
+				fAbsVelocity[1] /= x;
+				
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fAbsVelocity);
+			}
+		}
+	}
+}
+
+void MinJumpVelocity(any data)
+{
+	int client = GetClientOfUserId(data);
+	
+	if(data != 0)
+	{
+		float fAbsVelocity[3];
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
+		
+		float fCurrentSpeed = SquareRoot(Pow(fAbsVelocity[0], 2.0) + Pow(fAbsVelocity[1], 2.0));
+		
+		if(fCurrentSpeed > 0.0)
+		{
+			float fMin = gF_MinJumpVelocity;
 			
 			if(fCurrentSpeed < fMin)
 			{
@@ -112,7 +179,7 @@ void MinVelocity(any data)
 				fAbsVelocity[0] /= x;
 				fAbsVelocity[1] /= x;
 				
-				SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
+				TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fAbsVelocity);
 			}
 		}
 	}
@@ -130,6 +197,6 @@ void Velocity_Multiplier(any data)
 		fAbsVelocity[0] *= gF_Velocity_Multiplier;
 		fAbsVelocity[1] *= gF_Velocity_Multiplier;
 		
-		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsVelocity);
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fAbsVelocity);
 	}
 }
