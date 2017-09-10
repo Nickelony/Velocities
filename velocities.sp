@@ -33,11 +33,11 @@ public void OnPluginStart()
 {
 	HookEvent("player_jump", PlayerJumpEvent);
 	
-	gCV_BonusVelocity = CreateConVar("bonus_velocity", "0.0", "Adds a fixed amount of bonus velocity every time you jump.", 0);
-	gCV_MaxVelocity = CreateConVar("max_velocity", "0.0", "Replacement for sv_maxvelocity, but this one can be client-sided.", 0, true, 0.0);
-	gCV_MaxJumpVelocity = CreateConVar("max_jump_velocity", "0.0", "Maximum amount of velocity to keep per jump.", 0, true, 0.0);
-	gCV_MinJumpVelocity = CreateConVar("min_jump_velocity", "0.0", "Minimum amount of velocity to keep per jump.", 0, true, 0.0);
-	gCV_Velocity_Multiplier = CreateConVar("velocity_multiplier", "1.0", "Multiplies your current velocity every time you jump.", 0);
+	gCV_BonusVelocity = CreateConVar("bonus_velocity", "0.0", "Adds a fixed amount of bonus velocity every time you jump.", FCVAR_NOTIFY);
+	gCV_MaxVelocity = CreateConVar("max_velocity", "0.0", "Replacement for sv_maxvelocity, but this one can be client-sided.", FCVAR_NOTIFY, true, 0.0);
+	gCV_MaxJumpVelocity = CreateConVar("max_jump_velocity", "0.0", "Maximum amount of velocity to keep per jump.", FCVAR_NOTIFY, true, 0.0);
+	gCV_MinJumpVelocity = CreateConVar("min_jump_velocity", "0.0", "Minimum amount of velocity to keep per jump.", FCVAR_NOTIFY, true, 0.0);
+	gCV_Velocity_Multiplier = CreateConVar("velocity_multiplier", "1.0", "Multiplies your current velocity every time you jump.", FCVAR_NOTIFY);
 	
 	gCV_BonusVelocity.AddChangeHook(OnConVarChanged);
 	gCV_MaxVelocity.AddChangeHook(OnConVarChanged);
